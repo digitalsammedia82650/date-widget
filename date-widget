@@ -1,168 +1,43 @@
-/* -----------------------------------------------------------
-   Digital Sam Media – Date & Time Widget Engine
-   GitHub: https://github.com/digitalsammedia82650/date-widget
-   File: date-widget.js (CLEAN + FIXED)
------------------------------------------------------------- */
-
 (function () {
-    console.log("DSM Widget: Script Loaded from GitHub...");
 
-    const DS_CORE = {
-        config: {
-            languages: {
-                en: "English", hi: "हिन्दी", ar: "Arabic", es: "Spanish",
-                fr: "French", de: "German", it: "Italian", pt: "Portuguese",
-                zh: "Chinese", ru: "Russian"
-            },
-            defaultLang: "en",
-            defaultTZ: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            creditUrl: "https://www.digitalsammedia.com/"
-        },
+    function formatLoadingTime(ms) {
+        if (ms < 1000) return ms + " ms";
+        return (ms / 1000).toFixed(2) + " seconds";
+    }
 
-        waitForContainer: function () {
-            const checkInterval = setInterval(() => {
-                const container = document.getElementById("todays-date-widget");
-                if (container) {
-                    clearInterval(checkInterval);
-                    console.log("DSM Widget: Container found! Initializing...");
-                    this.init(container);
-                }
-            }, 50);
+    window.addEventListener("load", function () {
+        const container = document.getElementById("date-loading-widget");
+        if (!container) return;
 
-            setTimeout(() => clearInterval(checkInterval), 10000);
-        },
+        const today = new Date();
+        const dateString = today.toLocaleDateString("en-IN", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric"
+        });
 
-        init: function (container) {
-            this.container = container;
+        const loadTime = performance.timing.loadEventEnd - performance.timing.navigationStart;
 
-            this.secureCheck();
+        container.innerHTML = `
+            <div style="
+                padding: 16px;
+                background: #ffffff;
+                border-radius: 12px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+                width: fit-content;
+                font-family: Arial, sans-serif;
+                line-height: 1.6;
+                border-left: 5px solid #4285f4;
+            ">
+                <div><strong>Date:</strong> ${dateString}</div>
+                <div><strong>Loading Time:</strong> ${formatLoadingTime(loadTime)}</div>
 
-            this.currentLang = localStorage.getItem("ds-lang") || this.config.defaultLang;
-            this.currentTZ = localStorage.getItem("ds-tz") || this.config.defaultTZ;
+                <div style="margin-top: 10px; font-size: 13px; opacity: 0.8;">
+                    Widget by <strong><a href="https://www.digitalsammedia.com" target="_blank">www.digitalsammedia.com</a></strong>
+                </div>
+            </div>
+        `;
+    });
 
-            this.applyTheme();
-            this.buildUI();
-            this.startTimer();
-        },
-
-        secureCheck: function () {
-            const link = this.container.querySelector(".credit-link");
-
-            if (!link || link.getAttribute("href") !== this.config.creditUrl) {
-                const newLink = document.createElement("a");
-                newLink.className = "credit-link";
-                newLink.href = this.config.creditUrl;
-                newLink.target = "_blank";
-                newLink.innerText = "DIGITAL SAM MEDIA";
-                this.container.appendChild(newLink);
-            }
-        },
-
-        applyTheme: function () {
-            const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-            const savedTheme = localStorage.getItem("ds-theme");
-            const theme = savedTheme || (prefersDark ? "dark" : "light");
-
-            if (theme === "dark") {
-                this.container.classList.add("ds-dark");
-                this.container.classList.remove("ds-light");
-            } else {
-                this.container.classList.add("ds-light");
-                this.container.classList.remove("ds-dark");
-            }
-        },
-
-        toggleTheme: function () {
-            const container = document.getElementById("todays-date-widget");
-            const isDark = container.classList.contains("ds-dark");
-            const newTheme = isDark ? "light" : "dark";
-
-            localStorage.setItem("ds-theme", newTheme);
-
-            container.classList.toggle("ds-dark", newTheme === "dark");
-            container.classList.toggle("ds-light", newTheme === "light");
-        },
-
-        buildUI: function () {
-            if (document.getElementById("ds-controls-box")) return;
-
-            const controls = document.createElement("div");
-            controls.id = "ds-controls-box";
-            controls.className = "ds-controls";
-
-            // Language dropdown
-            const langSelect = document.createElement("select");
-            Object.entries(this.config.languages).forEach(([code, name]) => {
-                const opt = document.createElement("option");
-                opt.value = code;
-                opt.textContent = name;
-                if (code === this.currentLang) opt.selected = true;
-                langSelect.appendChild(opt);
-            });
-            langSelect.onchange = (e) => {
-                this.currentLang = e.target.value;
-                localStorage.setItem("ds-lang", this.currentLang);
-                this.render();
-            };
-
-            // Timezone dropdown
-            const tzSelect = document.createElement("select");
-            const timezones = Intl.supportedValuesOf("timeZone");
-
-            timezones.forEach((tz) => {
-                const opt = document.createElement("option");
-                opt.value = tz;
-                opt.textContent = tz;
-                if (tz === this.currentTZ) opt.selected = true;
-                tzSelect.appendChild(opt);
-            });
-
-            tzSelect.onchange = (e) => {
-                this.currentTZ = e.target.value;
-                localStorage.setItem("ds-tz", this.currentTZ);
-                this.render();
-            };
-
-            // Theme button
-            const themeBtn = document.createElement("button");
-            themeBtn.className = "ds-theme-btn";
-            themeBtn.innerHTML = "🌗";
-            themeBtn.onclick = this.toggleTheme;
-
-            controls.append(langSelect, tzSelect, themeBtn);
-            this.container.appendChild(controls);
-        },
-
-        render: function () {
-            const dateEl = document.getElementById("widget-date");
-            const timeEl = document.getElementById("widget-time");
-            if (!dateEl || !timeEl) return;
-
-            const now = new Date();
-
-            dateEl.textContent = now.toLocaleDateString(this.currentLang, {
-                weekday: "long",
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-                timeZone: this.currentTZ
-            });
-
-            timeEl.textContent = now.toLocaleTimeString(this.currentLang, {
-                hour: "numeric",
-                minute: "numeric",
-                second: "numeric",
-                hour12: true,
-                timeZone: this.currentTZ
-            });
-        },
-
-        startTimer: function () {
-            this.render();
-            setInterval(() => this.render(), 1000);
-            setInterval(() => this.secureCheck(), 5000);
-        }
-    };
-
-    DS_CORE.waitForContainer();
 })();
