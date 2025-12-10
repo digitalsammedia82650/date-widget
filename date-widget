@@ -2,7 +2,7 @@
    Digital Sam Media - Widget engine (put this file in your GitHub repo)
    - Renders into an element with id="ds-date-widget"
    - Uses Shadow DOM so CSS is scoped and widget internals are not visible
-   - Shows Date + Page Load Time and site credit
+   - Shows Date, Time, Page Load Time, and site credit
 */
 
 (function () {
@@ -47,7 +47,20 @@
     if (ms < 1000) return ms + ' ms';
     return (ms / 1000).toFixed(2) + ' s';
   }
+  
+  // New: Function to format time (e.g., 3:42 PM)
+  function formatTime(d) {
+    try {
+      return d.toLocaleTimeString(undefined, {
+        hour: 'numeric',
+        minute: '2-digit'
+      });
+    } catch (e) {
+      return d.toTimeString().substring(0, 5);
+    }
+  }
 
+  // Updated: Function to format the date part
   function formatDate(d) {
     try {
       return d.toLocaleDateString(undefined, {
@@ -80,11 +93,13 @@
         border-radius: 12px;
         box-shadow: 0 6px 20px rgba(0,0,0,0.12);
         border-left: 5px solid #2563eb;
-        min-width: 220px;
+        min-width: 240px; /* slightly wider to fit time */
       }
-      .dsm-date { font-weight:700; font-size: 0.95rem; margin-bottom:6px; }
-      .dsm-load { font-size:1.6rem; font-weight:800; line-height:1; margin-bottom:8px; }
-      .dsm-credit { font-size:0.78rem; opacity:0.85; margin-top:8px; }
+      .dsm-time { font-weight:800; font-size: 1.8rem; line-height:1; margin-bottom:8px; } /* new element/style */
+      .dsm-date { font-weight:700; font-size: 0.95rem; margin-bottom:12px; opacity: 0.9; }
+      .dsm-load-label { font-size:0.75rem; opacity:0.7; } /* style for Load label */
+      .dsm-load { font-size:0.9rem; font-weight:600; line-height:1; } /* smaller load time */
+      .dsm-credit { font-size:0.78rem; opacity:0.85; margin-top:12px; border-top: 1px solid rgba(0,0,0,0.08); padding-top: 8px; }
       .dsm-credit a { color: inherit; text-decoration:none; font-weight:700; }
     `;
 
@@ -92,8 +107,10 @@
     const root = document.createElement('div');
     root.className = 'dsm-root';
     root.innerHTML = `
+      <div class="dsm-time" id="dsm-time">Loading time…</div>
       <div class="dsm-date" id="dsm-date">Loading date…</div>
-      <div class="dsm-load" id="dsm-load">Load: —</div>
+      <div class="dsm-load-label">Page Load Time:</div>
+      <div class="dsm-load" id="dsm-load">—</div>
       <div class="dsm-credit" id="dsm-credit">
         Widget by <a id="dsm-credit-link" href="https://www.digitalsammedia.com" target="_blank" rel="noopener">www.digitalsammedia.com</a>
       </div>
@@ -103,23 +120,29 @@
     shadow.appendChild(style);
     shadow.appendChild(root);
 
+    const timeEl = shadow.getElementById ? shadow.getElementById('dsm-time') : root.querySelector('#dsm-time');
     const dateEl = shadow.getElementById ? shadow.getElementById('dsm-date') : root.querySelector('#dsm-date');
     const loadEl = shadow.getElementById ? shadow.getElementById('dsm-load') : root.querySelector('#dsm-load');
     const creditLink = shadow.getElementById ? shadow.getElementById('dsm-credit-link') : root.querySelector('#dsm-credit-link');
 
     // Render values
+    let initialLoadTimeRendered = false;
     function render() {
       const now = new Date();
+      timeEl.textContent = formatTime(now);
       dateEl.textContent = formatDate(now);
 
-      const ms = computeLoadMs();
-      loadEl.textContent = 'Load: ' + formatLoad(ms);
+      if (!initialLoadTimeRendered) {
+        const ms = computeLoadMs();
+        loadEl.textContent = formatLoad(ms);
+        initialLoadTimeRendered = true;
+      }
     }
 
     // initial render (use setTimeout to allow loadEventEnd to be set if called right at load)
     setTimeout(render, 50);
 
-    // optional: update clock date once per minute (keeps date accurate across midnight)
+    // Update clock and date once per minute (60s * 1000ms)
     setInterval(() => {
       safe(render);
     }, 60 * 1000);
