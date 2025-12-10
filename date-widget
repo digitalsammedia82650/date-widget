@@ -1,11 +1,12 @@
 /* -----------------------------------------------------------
-   Digital Sam Media – Core Engine
-   Version: 2.0 (Secure & Optimized)
-   Hosted on GitHub
+   Digital Sam Media – Core Engine (Auto-Loader Fixed)
+   Hosted on GitHub: https://github.com/digitalsammedia82650/date-widget
+   File Name: date-widget.js
 ------------------------------------------------------------ */
 
 (function() {
-    // secure namespace
+    console.log("DSM Widget: Script Loaded from GitHub...");
+
     const DS_CORE = {
         config: {
             languages: {
@@ -18,34 +19,43 @@
             creditUrl: "https://www.digitalsammedia.com/"
         },
 
-        init: function() {
-            this.container = document.getElementById("todays-date-widget");
-            if (!this.container) return;
+        // "Hunter" Logic: Waits for the element to exist before running
+        waitForContainer: function() {
+            const checkInterval = setInterval(() => {
+                const container = document.getElementById("todays-date-widget");
+                if (container) {
+                    clearInterval(checkInterval);
+                    console.log("DSM Widget: Container found! Initializing...");
+                    this.init(container);
+                }
+            }, 50); // Check every 50ms
+            
+            // Stop checking after 10 seconds to save memory
+            setTimeout(() => clearInterval(checkInterval), 10000);
+        },
 
-            // Security Check: Verify Credit Link Integrity
-            this.secureCheck();
+        init: function(container) {
+            this.container = container;
+            this.secureCheck(); // Security Link Check
 
-            // Load saved settings or defaults
+            // Load settings
             this.currentLang = localStorage.getItem("ds-lang") || this.config.defaultLang;
             this.currentTZ = localStorage.getItem("ds-tz") || this.config.defaultTZ;
 
             this.applyTheme();
-            this.buildUI();
-            this.startTimer();
+            this.buildUI(); // Build Dropdowns
+            this.startTimer(); // Start Clock
         },
 
         secureCheck: function() {
-            // "Secure": Ensures the credit link exists and is correct. 
-            // If removed, the widget functionality is intentionally degraded or re-inserted.
             const link = this.container.querySelector('.credit-link');
+            // If link is missing or tampered with, force it back
             if (!link || link.getAttribute('href') !== this.config.creditUrl) {
                 const newLink = document.createElement('a');
                 newLink.className = 'credit-link';
                 newLink.href = this.config.creditUrl;
                 newLink.target = '_blank';
                 newLink.innerText = 'DIGITAL SAM MEDIA';
-                newLink.style.display = 'block';
-                newLink.style.marginTop = '10px';
                 this.container.appendChild(newLink);
             }
         },
@@ -55,7 +65,6 @@
             const savedTheme = localStorage.getItem("ds-theme");
             const theme = savedTheme || (prefersDark ? "dark" : "light");
             
-            // Apply class to widget container mainly, or body if full page theme
             if(theme === 'dark') {
                 this.container.classList.add('ds-dark');
                 this.container.classList.remove('ds-light');
@@ -66,20 +75,31 @@
         },
 
         toggleTheme: function() {
-            const isDark = DS_CORE.container.classList.contains('ds-dark');
+            // Use global window reference to find container if "this" context is lost in event
+            const container = document.getElementById("todays-date-widget");
+            const isDark = container.classList.contains('ds-dark');
             const newTheme = isDark ? "light" : "dark";
             localStorage.setItem("ds-theme", newTheme);
-            DS_CORE.applyTheme();
+            
+            if(newTheme === 'dark') {
+                container.classList.add('ds-dark');
+                container.classList.remove('ds-light');
+            } else {
+                container.classList.add('ds-light');
+                container.classList.remove('ds-dark');
+            }
         },
 
         buildUI: function() {
-            // Create Controls Container
+            // Avoid duplicate controls if script runs twice
+            if(document.getElementById("ds-controls-box")) return;
+
             const controls = document.createElement("div");
+            controls.id = "ds-controls-box";
             controls.className = "ds-controls";
 
-            // Language Selector
+            // Language
             const langSelect = document.createElement("select");
-            langSelect.id = "ds-lang-sel";
             Object.entries(this.config.languages).forEach(([code, name]) => {
                 const opt = document.createElement("option");
                 opt.value = code;
@@ -87,15 +107,14 @@
                 if(code === this.currentLang) opt.selected = true;
                 langSelect.appendChild(opt);
             });
-            langSelect.addEventListener("change", (e) => {
+            langSelect.onchange = (e) => {
                 this.currentLang = e.target.value;
                 localStorage.setItem("ds-lang", this.currentLang);
                 this.render();
-            });
+            };
 
-            // Timezone Selector
+            // Timezone
             const tzSelect = document.createElement("select");
-            tzSelect.id = "ds-tz-sel";
             const timezones = Intl.supportedValuesOf("timeZone");
             timezones.forEach(tz => {
                  const opt = document.createElement("option");
@@ -104,16 +123,16 @@
                  if(tz === this.currentTZ) opt.selected = true;
                  tzSelect.appendChild(opt);
             });
-            tzSelect.addEventListener("change", (e) => {
+            tzSelect.onchange = (e) => {
                 this.currentTZ = e.target.value;
                 localStorage.setItem("ds-tz", this.currentTZ);
                 this.render();
-            });
+            };
 
             // Theme Button
             const themeBtn = document.createElement("button");
             themeBtn.className = "ds-theme-btn";
-            themeBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>';
+            themeBtn.innerHTML = '🌗';
             themeBtn.onclick = this.toggleTheme;
 
             controls.append(langSelect, tzSelect, themeBtn);
@@ -128,32 +147,23 @@
 
             const now = new Date();
 
-            // Date Render
             dateEl.textContent = now.toLocaleDateString(this.currentLang, {
                 weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: this.currentTZ
             });
 
-            // Time Render
-            const timeString = now.toLocaleTimeString(this.currentLang, {
+            // Use innerHTML to allow styling if needed, but simple text is safer
+            timeEl.innerText = now.toLocaleTimeString(this.currentLang, {
                 hour: "numeric", minute: "numeric", second: "numeric", hour12: true, timeZone: this.currentTZ
             });
-            
-            // Formatting time for style
-            timeEl.innerHTML = timeString;
         },
 
         startTimer: function() {
-            this.render(); // Instant render
-            setInterval(() => this.render(), 1000); // Update every second
-            // Periodic integrity check (every 5 seconds)
-            setInterval(() => this.secureCheck(), 5000);
+            this.render();
+            setInterval(() => this.render(), 1000);
+            setInterval(() => this.secureCheck(), 5000); // Check integrity
         }
     };
 
-    // Initialize when DOM is ready
-    if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", () => DS_CORE.init());
-    } else {
-        DS_CORE.init();
-    }
+    // Start the hunter
+    DS_CORE.waitForContainer();
 })();
