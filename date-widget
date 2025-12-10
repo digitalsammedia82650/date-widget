@@ -1,17 +1,17 @@
 /* -----------------------------------------------------------
-   Digital Sam Media – Core Engine (Auto-Loader Fixed)
-   Hosted on GitHub: https://github.com/digitalsammedia82650/date-widget
-   File Name: date-widget.js
+   Digital Sam Media – Date & Time Widget Engine
+   GitHub: https://github.com/digitalsammedia82650/date-widget
+   File: date-widget.js (CLEAN + FIXED)
 ------------------------------------------------------------ */
 
-(function() {
+(function () {
     console.log("DSM Widget: Script Loaded from GitHub...");
 
     const DS_CORE = {
         config: {
             languages: {
-                en: "English", hi: "हिन्दी", ar: "Arabic", es: "Spanish", 
-                fr: "French", de: "German", it: "Italian", pt: "Portuguese", 
+                en: "English", hi: "हिन्दी", ar: "Arabic", es: "Spanish",
+                fr: "French", de: "German", it: "Italian", pt: "Portuguese",
                 zh: "Chinese", ru: "Russian"
             },
             defaultLang: "en",
@@ -19,8 +19,7 @@
             creditUrl: "https://www.digitalsammedia.com/"
         },
 
-        // "Hunter" Logic: Waits for the element to exist before running
-        waitForContainer: function() {
+        waitForContainer: function () {
             const checkInterval = setInterval(() => {
                 const container = document.getElementById("todays-date-widget");
                 if (container) {
@@ -28,83 +27,76 @@
                     console.log("DSM Widget: Container found! Initializing...");
                     this.init(container);
                 }
-            }, 50); // Check every 50ms
-            
-            // Stop checking after 10 seconds to save memory
+            }, 50);
+
             setTimeout(() => clearInterval(checkInterval), 10000);
         },
 
-        init: function(container) {
+        init: function (container) {
             this.container = container;
-            this.secureCheck(); // Security Link Check
 
-            // Load settings
+            this.secureCheck();
+
             this.currentLang = localStorage.getItem("ds-lang") || this.config.defaultLang;
             this.currentTZ = localStorage.getItem("ds-tz") || this.config.defaultTZ;
 
             this.applyTheme();
-            this.buildUI(); // Build Dropdowns
-            this.startTimer(); // Start Clock
+            this.buildUI();
+            this.startTimer();
         },
 
-        secureCheck: function() {
-            const link = this.container.querySelector('.credit-link');
-            // If link is missing or tampered with, force it back
-            if (!link || link.getAttribute('href') !== this.config.creditUrl) {
-                const newLink = document.createElement('a');
-                newLink.className = 'credit-link';
+        secureCheck: function () {
+            const link = this.container.querySelector(".credit-link");
+
+            if (!link || link.getAttribute("href") !== this.config.creditUrl) {
+                const newLink = document.createElement("a");
+                newLink.className = "credit-link";
                 newLink.href = this.config.creditUrl;
-                newLink.target = '_blank';
-                newLink.innerText = 'DIGITAL SAM MEDIA';
+                newLink.target = "_blank";
+                newLink.innerText = "DIGITAL SAM MEDIA";
                 this.container.appendChild(newLink);
             }
         },
 
-        applyTheme: function() {
+        applyTheme: function () {
             const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
             const savedTheme = localStorage.getItem("ds-theme");
             const theme = savedTheme || (prefersDark ? "dark" : "light");
-            
-            if(theme === 'dark') {
-                this.container.classList.add('ds-dark');
-                this.container.classList.remove('ds-light');
+
+            if (theme === "dark") {
+                this.container.classList.add("ds-dark");
+                this.container.classList.remove("ds-light");
             } else {
-                this.container.classList.add('ds-light');
-                this.container.classList.remove('ds-dark');
+                this.container.classList.add("ds-light");
+                this.container.classList.remove("ds-dark");
             }
         },
 
-        toggleTheme: function() {
-            // Use global window reference to find container if "this" context is lost in event
+        toggleTheme: function () {
             const container = document.getElementById("todays-date-widget");
-            const isDark = container.classList.contains('ds-dark');
+            const isDark = container.classList.contains("ds-dark");
             const newTheme = isDark ? "light" : "dark";
+
             localStorage.setItem("ds-theme", newTheme);
-            
-            if(newTheme === 'dark') {
-                container.classList.add('ds-dark');
-                container.classList.remove('ds-light');
-            } else {
-                container.classList.add('ds-light');
-                container.classList.remove('ds-dark');
-            }
+
+            container.classList.toggle("ds-dark", newTheme === "dark");
+            container.classList.toggle("ds-light", newTheme === "light");
         },
 
-        buildUI: function() {
-            // Avoid duplicate controls if script runs twice
-            if(document.getElementById("ds-controls-box")) return;
+        buildUI: function () {
+            if (document.getElementById("ds-controls-box")) return;
 
             const controls = document.createElement("div");
             controls.id = "ds-controls-box";
             controls.className = "ds-controls";
 
-            // Language
+            // Language dropdown
             const langSelect = document.createElement("select");
             Object.entries(this.config.languages).forEach(([code, name]) => {
                 const opt = document.createElement("option");
                 opt.value = code;
-                opt.text = name;
-                if(code === this.currentLang) opt.selected = true;
+                opt.textContent = name;
+                if (code === this.currentLang) opt.selected = true;
                 langSelect.appendChild(opt);
             });
             langSelect.onchange = (e) => {
@@ -113,57 +105,64 @@
                 this.render();
             };
 
-            // Timezone
+            // Timezone dropdown
             const tzSelect = document.createElement("select");
             const timezones = Intl.supportedValuesOf("timeZone");
-            timezones.forEach(tz => {
-                 const opt = document.createElement("option");
-                 opt.value = tz;
-                 opt.text = tz;
-                 if(tz === this.currentTZ) opt.selected = true;
-                 tzSelect.appendChild(opt);
+
+            timezones.forEach((tz) => {
+                const opt = document.createElement("option");
+                opt.value = tz;
+                opt.textContent = tz;
+                if (tz === this.currentTZ) opt.selected = true;
+                tzSelect.appendChild(opt);
             });
+
             tzSelect.onchange = (e) => {
                 this.currentTZ = e.target.value;
                 localStorage.setItem("ds-tz", this.currentTZ);
                 this.render();
             };
 
-            // Theme Button
+            // Theme button
             const themeBtn = document.createElement("button");
             themeBtn.className = "ds-theme-btn";
-            themeBtn.innerHTML = '🌗';
+            themeBtn.innerHTML = "🌗";
             themeBtn.onclick = this.toggleTheme;
 
             controls.append(langSelect, tzSelect, themeBtn);
             this.container.appendChild(controls);
         },
 
-        render: function() {
+        render: function () {
             const dateEl = document.getElementById("widget-date");
             const timeEl = document.getElementById("widget-time");
-            
             if (!dateEl || !timeEl) return;
 
             const now = new Date();
 
             dateEl.textContent = now.toLocaleDateString(this.currentLang, {
-                weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: this.currentTZ
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+                timeZone: this.currentTZ
             });
 
-            // Use innerHTML to allow styling if needed, but simple text is safer
-            timeEl.innerText = now.toLocaleTimeString(this.currentLang, {
-                hour: "numeric", minute: "numeric", second: "numeric", hour12: true, timeZone: this.currentTZ
+            timeEl.textContent = now.toLocaleTimeString(this.currentLang, {
+                hour: "numeric",
+                minute: "numeric",
+                second: "numeric",
+                hour12: true,
+                timeZone: this.currentTZ
             });
         },
 
-        startTimer: function() {
+        startTimer: function () {
             this.render();
             setInterval(() => this.render(), 1000);
-            setInterval(() => this.secureCheck(), 5000); // Check integrity
+            setInterval(() => this.secureCheck(), 5000);
         }
     };
 
-    // Start the hunter
     DS_CORE.waitForContainer();
 })();
