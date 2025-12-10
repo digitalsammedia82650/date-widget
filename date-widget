@@ -10,6 +10,7 @@
 
   const HUNTER_INTERVAL = 50;   // ms to poll for container
   const HUNTER_TIMEOUT = 10000; // stop hunting after 10s
+  const CREDIT_URL = 'https://www.digitalsammedia.com'; // Define credit URL once
 
   function safe(fn) {
     try { fn(); } catch (e) { console.error('DSM Widget error:', e); }
@@ -17,25 +18,20 @@
 
   function computeLoadMs() {
     try {
-      // Prefer NavigationTiming Level 2
+      // ... (Load timing logic remains the same)
       const navEntries = (performance.getEntriesByType && performance.getEntriesByType('navigation')) || [];
       const nav = navEntries[0] || null;
 
       if (nav && typeof nav.loadEventEnd === 'number') {
         if (nav.loadEventEnd > 0) return Math.round(nav.loadEventEnd - (nav.startTime || 0));
-        // If loadEventEnd is 0 (not fired) fall back to performance.now()
         return Math.round(performance.now());
       }
-
-      // Legacy timing
       if (performance.timing && performance.timing.navigationStart) {
         const t = performance.timing;
         if (t.loadEventEnd && t.loadEventEnd > 0) {
           return Math.round(t.loadEventEnd - t.navigationStart);
         }
       }
-
-      // Final fallback
       return Math.round(performance.now());
     } catch (e) {
       return null;
@@ -48,7 +44,6 @@
     return (ms / 1000).toFixed(2) + ' s';
   }
   
-  // New: Function to format time (e.g., 3:42 PM)
   function formatTime(d) {
     try {
       return d.toLocaleTimeString(undefined, {
@@ -60,7 +55,6 @@
     }
   }
 
-  // Updated: Function to format the date part
   function formatDate(d) {
     try {
       return d.toLocaleDateString(undefined, {
@@ -93,12 +87,12 @@
         border-radius: 12px;
         box-shadow: 0 6px 20px rgba(0,0,0,0.12);
         border-left: 5px solid #2563eb;
-        min-width: 240px; /* slightly wider to fit time */
+        min-width: 240px;
       }
-      .dsm-time { font-weight:800; font-size: 1.8rem; line-height:1; margin-bottom:8px; } /* new element/style */
+      .dsm-time { font-weight:800; font-size: 1.8rem; line-height:1; margin-bottom:8px; }
       .dsm-date { font-weight:700; font-size: 0.95rem; margin-bottom:12px; opacity: 0.9; }
-      .dsm-load-label { font-size:0.75rem; opacity:0.7; } /* style for Load label */
-      .dsm-load { font-size:0.9rem; font-weight:600; line-height:1; } /* smaller load time */
+      .dsm-load-label { font-size:0.75rem; opacity:0.7; }
+      .dsm-load { font-size:0.9rem; font-weight:600; line-height:1; }
       .dsm-credit { font-size:0.78rem; opacity:0.85; margin-top:12px; border-top: 1px solid rgba(0,0,0,0.08); padding-top: 8px; }
       .dsm-credit a { color: inherit; text-decoration:none; font-weight:700; }
     `;
@@ -111,8 +105,8 @@
       <div class="dsm-date" id="dsm-date">Loading date…</div>
       <div class="dsm-load-label">Page Load Time:</div>
       <div class="dsm-load" id="dsm-load">—</div>
-      <div class="dsm-credit" id="dsm-credit">
-        Widget by <a id="dsm-credit-link" href="https://www.digitalsammedia.com" target="_blank" rel="noopener">www.digitalsammedia.com</a>
+      <div class="dsm-credit">
+        Widget by <a id="dsm-credit-link" href="${CREDIT_URL}" target="_blank" rel="noopener">${CREDIT_URL.replace('https://www.', '')}</a>
       </div>
     `;
 
@@ -120,10 +114,10 @@
     shadow.appendChild(style);
     shadow.appendChild(root);
 
+    // Get element references from the shadow root
     const timeEl = shadow.getElementById ? shadow.getElementById('dsm-time') : root.querySelector('#dsm-time');
     const dateEl = shadow.getElementById ? shadow.getElementById('dsm-date') : root.querySelector('#dsm-date');
     const loadEl = shadow.getElementById ? shadow.getElementById('dsm-load') : root.querySelector('#dsm-load');
-    const creditLink = shadow.getElementById ? shadow.getElementById('dsm-credit-link') : root.querySelector('#dsm-credit-link');
 
     // Render values
     let initialLoadTimeRendered = false;
@@ -139,7 +133,7 @@
       }
     }
 
-    // initial render (use setTimeout to allow loadEventEnd to be set if called right at load)
+    // initial render
     setTimeout(render, 50);
 
     // Update clock and date once per minute (60s * 1000ms)
@@ -147,14 +141,17 @@
       safe(render);
     }, 60 * 1000);
 
-    // Credit integrity: if someone attempts to remove anchor inside shadow it will re-insert automatically
+    // 🚩 FIX APPLIED HERE: Re-fetch the credit link element inside the interval
     setInterval(() => {
       try {
-        if (!creditLink || creditLink.getAttribute('href') !== 'https://www.digitalsammedia.com') {
-          const parent = root.querySelector('.dsm-credit');
-          if (parent) {
-            parent.innerHTML = 'Widget by <a id="dsm-credit-link" href="https://www.digitalsammedia.com" target="_blank" rel="noopener">www.digitalsammedia.com</a>';
-        }
+        const creditParent = root.querySelector('.dsm-credit');
+        const creditLink = creditParent.querySelector('#dsm-credit-link'); // <-- NEW: Get fresh reference
+
+        // Check if link is missing or has wrong URL
+        if (!creditLink || creditLink.getAttribute('href') !== CREDIT_URL) {
+          if (creditParent) {
+            creditParent.innerHTML = `Widget by <a id="dsm-credit-link" href="${CREDIT_URL}" target="_blank" rel="noopener">${CREDIT_URL.replace('https://www.', '')}</a>`;
+          }
         }
       } catch (e) { /* ignore */ }
     }, 4000);
