@@ -18,7 +18,6 @@
 
   function computeLoadMs() {
     try {
-      // ... (Load timing logic remains the same)
       const navEntries = (performance.getEntriesByType && performance.getEntriesByType('navigation')) || [];
       const nav = navEntries[0] || null;
 
@@ -73,7 +72,7 @@
     if (container.__dsm_widget_inited) return;
     container.__dsm_widget_inited = true;
 
-    // Attach_shadow to avoid CSS leaks and protect credit visibility
+    // Attach shadow to avoid CSS leaks and protect credit visibility
     const shadow = container.attachShadow ? container.attachShadow({ mode: 'open' }) : container;
 
     // styles inside shadow
@@ -141,11 +140,11 @@
       safe(render);
     }, 60 * 1000);
 
-    // 🚩 FIX APPLIED HERE: Re-fetch the credit link element inside the interval
+    // 🚩 CREDIT PROTECTION: Re-fetch the credit link element inside the interval
     setInterval(() => {
       try {
         const creditParent = root.querySelector('.dsm-credit');
-        const creditLink = creditParent.querySelector('#dsm-credit-link'); // <-- NEW: Get fresh reference
+        const creditLink = creditParent ? creditParent.querySelector('#dsm-credit-link') : null;
 
         // Check if link is missing or has wrong URL
         if (!creditLink || creditLink.getAttribute('href') !== CREDIT_URL) {
