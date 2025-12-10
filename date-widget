@@ -1,0 +1,121 @@
+/* -----------------------------------------------------------
+   Digital Sam Media – Smart Date & Time Widget (Instant Load)
+   Features:
+   ✔ Auto Date & Time
+   ✔ Dark / Light Theme Auto + Toggle
+   ✔ Language Selector (10 languages)
+   ✔ Timezone Selector
+   ✔ Countdown Widget Support
+   ✔ ZERO loading delay 🚀
+------------------------------------------------------------ */
+
+const DSM_WIDGET = {
+  languages: {
+    en: "English",
+    hi: "हिन्दी",
+    ar: "Arabic",
+    es: "Spanish",
+    fr: "French",
+    de: "German",
+    it: "Italian",
+    pt: "Portuguese",
+    zh: "Chinese",
+    ru: "Russian"
+  },
+
+  defaultLang: "en",
+  defaultTZ: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  countdownDate: null
+};
+
+// ------------------ Theme Handler ------------------ //
+function applyTheme() {
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const theme = localStorage.getItem("ds-theme") || (prefersDark ? "dark" : "light");
+  document.body.classList.toggle("ds-dark", theme === "dark");
+}
+
+function toggleTheme() {
+  const current = localStorage.getItem("ds-theme") === "dark" ? "light" : "dark";
+  localStorage.setItem("ds-theme", current);
+  applyTheme();
+}
+
+// ------------------ Build UI Selectors ------------------ //
+function buildSelectors() {
+  const widget = document.getElementById("todays-date-widget");
+  if (!widget) return;
+
+  const langSelect = document.createElement("select");
+  langSelect.id = "ds-lang";
+  Object.entries(DSM_WIDGET.languages).forEach(([code, name]) => {
+    langSelect.innerHTML += `<option value="${code}">${name}</option>`;
+  });
+  langSelect.value = DSM_WIDGET.defaultLang;
+  langSelect.onchange = updateWidget;
+  widget.appendChild(langSelect);
+
+  const tzSelect = document.createElement("select");
+  tzSelect.id = "ds-tz";
+  tzSelect.innerHTML = Intl.supportedValuesOf("timeZone")
+    .map(tz => `<option>${tz}</option>`).join("");
+  tzSelect.value = DSM_WIDGET.defaultTZ;
+  tzSelect.onchange = updateWidget;
+  widget.appendChild(tzSelect);
+
+  const themeBtn = document.createElement("button");
+  themeBtn.textContent = "🌗 Theme";
+  themeBtn.style.marginTop = "12px";
+  themeBtn.onclick = toggleTheme;
+  widget.appendChild(themeBtn);
+}
+
+// ------------------ Countdown Logic ------------------ //
+function updateCountdown(dateEl) {
+  const now = new Date();
+  const diff = DSM_WIDGET.countdownDate - now;
+
+  if (diff <= 0) {
+    dateEl.textContent = "Countdown Complete!";
+    return;
+  }
+
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  dateEl.textContent = `${days} Days Remaining`;
+}
+
+// ------------------ Main Renderer ------------------ //
+function updateWidget() {
+  const dateEl = document.getElementById("widget-date");
+  const timeEl = document.getElementById("widget-time");
+
+  if (!dateEl || !timeEl) return;
+
+  const lang = document.getElementById("ds-lang")?.value || DSM_WIDGET.defaultLang;
+  const tz = document.getElementById("ds-tz")?.value || DSM_WIDGET.defaultTZ;
+
+  const now = new Date();
+
+  if (DSM_WIDGET.countdownDate instanceof Date) {
+    updateCountdown(dateEl);
+  } else {
+    dateEl.textContent = now.toLocaleDateString(lang, {
+      weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: tz
+    });
+  }
+
+  const timeString = now.toLocaleTimeString(lang, {
+    hour: "numeric", minute: "numeric", hour12: true, timeZone: tz
+  });
+
+  const [h, m, part] = timeString.replace(" ", ":").split(":");
+  timeEl.innerHTML = `${h}:${m} <span class="ampm">${part}</span>`;
+}
+
+// ------------------ Smart Instant Init ------------------ //
+document.addEventListener("DOMContentLoaded", () => {
+  applyTheme();
+  buildSelectors();
+  updateWidget(); // 🚀 render instantly — no delay
+  setInterval(updateWidget, 1000);
+});
